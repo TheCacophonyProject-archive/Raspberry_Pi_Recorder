@@ -1,52 +1,41 @@
-import time
-import multiprocessing
+import sys
+from CacophonyModules import pir, ir_camera, events, thermal_camera, upload
 import RPi.GPIO as GPIO
 
-import util
-import ir_recorder
-import thermal_recorder
-import config
 
+stop = False
+threads = []
+# Add threads to list
+threads.append(pir.MainThread())
+threads.append(ir_camera.MainThread())
+threads.append(thermal_camera.MainThread())
+threads.append(upload.MainThread())
+# Start all threads
+for thread in threads:
+    thread.start()
 
-
-def setup():
-    GPIO.setwarnings(False)
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(5, GPIO.IN, pull_up_down = GPIO.PUD_DOWN)
-    GPIO.setup(6, GPIO.OUT, initial = GPIO.LOW)
-    GPIO.output(6, GPIO.HIGH)
-    GPIO.output(6, GPIO.LOW)
-    if not util.make_dirs(config.folderList):
-        print("Failed to make folders for data..")
-        return False
-
-
-setup()
-print("Waiting for button press.")
-GPIO.wait_for_edge(5, GPIO.RISING)
-
-
-print("Starting in...")
-x = 5
-while x > 0:
-    print(x)
-    time.sleep(1)
-    x -= 1
-print("Starting...")
-
-GPIO.output(6, GPIO.HIGH)
-time.sleep(2)
-
-ir_recorder.init()
-util.upload_update()
-
-jobs = []
-p = multiprocessing.Process(target=ir_recorder.run())
-p.start()
-jobs.append(p)
-p = multiprocessing.Process(target=thermal_recorder.run())
-p.start()
-jobs.append(p)
-
-while True:
-    time.sleep(0.1)
+try:
+    while not stop:
+        events.eventWait.wait(1000)
+        if len(events.eventQueue):
+            event = events.eventQueue[0]
+            del events.eventQueue[0]
+            for thread in threads:  # Send event to each thread.
+                thread.new_event(event)
+            if not len(events.eventQueue):
+                events.eventWait.clear() # Clears eventWait if there are no more events
+except KeyboardInterrupt:
+    print("Keyboard Interrupt.")
+except:
+    e = sys.exc_info()[0]
+    print("Exception: " + str(e))
+finally:
+    print("Stopping threads.")
+    # Calling threads to stop
+    for thread in threads:
+        thread.new_event(events.get_stop_event())
+    # Waiting for threads to stop
+    for thread in threads:
+        thread.join()
+    GPIO.cleanup()
+    print("End.")

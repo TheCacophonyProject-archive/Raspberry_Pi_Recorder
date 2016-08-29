@@ -1,2 +1,5 @@
 *.pyc
 data/
+config.py
+ir_videos/
+toUpload/
