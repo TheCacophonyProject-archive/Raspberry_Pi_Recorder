@@ -81,9 +81,12 @@ class upload(threading.Thread):
 
         # Post and print status code.
         print('Posting data...')
-        r = requests.post(url, files = files, data = {'data': json.dumps(metadata)})
-        print('Status code: {}'.format(r.status_code))
+        try:
+            r = requests.post(url, files = files, data = {'data': json.dumps(metadata)})
+            print('Status code: {}'.format(r.status_code))
 
-        # Delete files if upload was a success.
-        if r.status_code == 200:
-            shutil.rmtree(self.dataFolder)      
+            # Delete files if upload was a success.
+            if r.status_code == 200:
+                shutil.rmtree(self.dataFolder)
+        except:
+            print("Error: With uploadin to database.")
