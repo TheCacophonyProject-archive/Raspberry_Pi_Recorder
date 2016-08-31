@@ -5,12 +5,14 @@ from pylepton import Lepton
 import cv2
 import numpy as np
 import os
+import util
 
 imageDelay = 0.2    # delay between images in seconds
 newImageEvent = threading.Event()
-images = []
 thermalDetection = False
 sensitivity = 50
+latestImage = None
+allImagesFolder = "./thermalData"
 
 class MainThread(threading.Thread):
     """Theramla camera main therad. Starts and controls child threads that
@@ -28,8 +30,8 @@ class MainThread(threading.Thread):
     def run(self):
         print("{name} thread running.".format(name = self.name))
         # Starting thread to take images and thead to detect things in images
-        self.cameraThread = cameraThread()
-        self.picDetection = picDetection()
+        self.cameraThread = CameraThread()
+        self.picDetection = PicDetection()
         self.cameraThread.start()
         self.picDetection.start()
         while not self._stop:
@@ -46,10 +48,15 @@ class MainThread(threading.Thread):
         self.eventWait.set()
 
     def run_event(self):
+        #print(events.THERMAL_DETECTION_END)
         if self.event == None:
             print("Error: self.event is not set when trying to run event...")
         elif self.event.type == events.STOP:
             self.stop()
+        elif self.event.type == events.THERMAL_DETECTION_START:
+            self.thermal_detection_start()
+        elif self.event.type == events.THERMAL_DETECTION_END:
+            self.thermal_detection_end()
 
     def stop(self):
         print("Stopping '{name}'.".format(name = self.name))
@@ -59,13 +66,26 @@ class MainThread(threading.Thread):
         self.cameraThread.join()
         self._stop = True
 
-class cameraThread(threading.Thread):
+    def thermal_detection_start(self):
+        self.cameraThread.set_thermal_detection(True)
+
+    def thermal_detection_end(self):
+        self.cameraThread.set_thermal_detection(False)
+
+class CameraThread(threading.Thread):
     """Takes thermal pictures setting the new image event each time an image
        is taken. Also saving the images if the thermal camera is recording."""
     def __init__(self):
         threading.Thread.__init__(self)
         self._stop = False
         self.lastImageCaptureTime = None
+        self.images = []    # List of images
+        self.thermalDetection = False
+        self.pirDetection = False
+        self.renderThreads = []
+        self.imagesFolder = None
+        self.data = {}
+        self.videoData = {}
         
     def run(self):
         with Lepton() as self.l:
@@ -88,17 +108,56 @@ class cameraThread(threading.Thread):
         self.lastImageCaptureTime = time.time()
         return ttni
 
+    def set_thermal_detection(self, td):
+        self.thermal_detection = td
+        if td and not self.thermalDetection:
+            self.thermalDetection = True
+            self.videoData = {
+                "recordingDateTime": util.datetimestamp(),
+                "startTimestamp": util.timestamp()
+                }
+            self.save_images(self.images)
+        elif self.thermalDetection and not td:
+            self.thermalDetection = False
+            self.videoData["duration"] = self.imageIndex/5
+            self.data["__type__"] = "videoRecording"
+            self.data["videoFile"] = self.videoData
+            renderThread = ThermalRender()
+            renderThread.run(self.imagesFolder, self.data)
+            self.imagesFolder = None
+            self.data = {}
+
+    def set_pir_detection(self, pd):
+        self.pirDetection = pd
+
     def take_image(self):
+        global latestImage
         a,_ = self.l.capture()
         cv2.normalize(a, a, 0, 65535, cv2.NORM_MINMAX)
         np.right_shift(a, 8, a)
-        while len(images) > 5:
-            del images[0]
-        images.append(a)
+        while len(self.images) > 5:
+            del self.images[0]
+        self.images.append(a)
+        latestImage = a
         newImageEvent.set()
-        
+        self.images.append(a)
+        while len(self.images) > 10:
+            del self.images[0]
+        if self.thermalDetection:
+            self.save_images([a])
 
-class picDetection(threading.Thread):
+    def save_images(self, images):
+        if self.imagesFolder == None:
+            self.imagesFolder = os.path.join(allImagesFolder, (str(int(time.time())))+util.rand_str())
+            self.imageIndex = 1
+            if not os.path.exists(self.imagesFolder):
+                os.makedirs(self.imagesFolder)
+        for i in images:
+            imageName = str(self.imageIndex).zfill(6) + '.jpg'
+            cv2.imwrite(os.path.join(self.imagesFolder, imageName), np.uint8(i))
+            self.imageIndex += 1         
+
+class PicDetection(threading.Thread):
     """Loops through waiting for a new image event and processing the image to
        see if something is in the image. If so a global event is set"""
     def __init__(self):
@@ -112,8 +171,8 @@ class picDetection(threading.Thread):
         while not self._stop:
             newImageEvent.wait()
             newImageEvent.clear()
-            if len(images) and not self._stop:
-                self.image = images[0]
+            if latestImage != None and not self._stop:
+                self.image = latestImage
                 self.detection()
         print("Stopped thermal image render therad.")
 
@@ -149,6 +208,21 @@ class picDetection(threading.Thread):
                     numInTop25 += 1 
         m = numInTop25 < sensitivity
         return m
+
+class ThermalRender(threading.Thread):
+    def __inti__(self):
+        threading.Thread.__init__(self)
+
+    def run(self, imagesFolder, data):
+        inputF = os.path.join(imagesFolder, "%06d.jpg")
+        outputF = os.path.join(imagesFolder, "file.avi")
+        command = "/usr/local/bin/ffmpeg -r 5 -i {i} {o}".format(
+            i = inputF, o = outputF)
+        print(command)
+        os.system(command)
+        util.save_data(data, outputF)
+        
+    
 
 # Old code that was used to save images and convert them into a video when the
 # thermal camera was ran in a differnt process, now using threads instead.
