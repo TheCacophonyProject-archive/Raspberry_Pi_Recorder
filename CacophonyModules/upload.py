@@ -5,11 +5,11 @@ import os
 import requests
 import json
 
-serverUrl = "http://192.168.2.3:8888"
+serverUrl = None
 
 class MainThread(threading.Thread):
     """Thread manage uploading data."""
-    def __init__(self):
+    def __init__(self, configParser):
         threading.Thread.__init__(self)
         self.events = []
         self._stop = False
@@ -17,8 +17,10 @@ class MainThread(threading.Thread):
         self.name = "Upload manager"
         print("Created new '{name}' thread".format(name = self.name))
 
+        global serverUrl
         self.uploadThreads = []
-
+        serverUrl = configParser.get('server', 'url')
+        
     def run(self):
         print("{name} thread running.".format(name = self.name))
         while not self._stop:

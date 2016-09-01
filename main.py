@@ -1,15 +1,27 @@
 import sys
 from CacophonyModules import pir, ir_camera, events, thermal_camera, upload
 import RPi.GPIO as GPIO
+import ConfigParser
+import os
+import time
 
+# Get config file
+configParser = ConfigParser.RawConfigParser()
+configPath = os.path.join(
+    os.path.dirname(os.path.realpath(__file__)), "config.txt")
+if not os.path.isfile(configPath):
+    print("Can't find config file: " + configPath)
+    while True:
+        time.sleep(1)
+configParser.read(configPath)
 
 stop = False
 threads = []
 # Add threads to list
 threads.append(pir.MainThread())
-threads.append(ir_camera.MainThread())
+threads.append(ir_camera.MainThread(configParser))
 threads.append(thermal_camera.MainThread())
-threads.append(upload.MainThread())
+threads.append(upload.MainThread(configParser))
 # Start all threads
 for thread in threads:
     thread.start()

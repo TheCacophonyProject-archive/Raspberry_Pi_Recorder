@@ -7,7 +7,7 @@ import util
 
 class MainThread(threading.Thread):
     """Template thread"""
-    def __init__(self):
+    def __init__(self, configParser):
         threading.Thread.__init__(self)
         self.events = []
         self._stop = False
@@ -19,6 +19,9 @@ class MainThread(threading.Thread):
         self.pirMotion = False
         self.thermalDetection = False
         self.camera = picamera.PiCamera()
+        resX = int(configParser.get('ir_camera', 'res_x'))
+        resY = int(configParser.get('ir_camera', 'res_y'))
+        self.camera.resolution = (resX, resY)
         self.recordingData = {}
         self.videoData = {}
         self.startTime = time.time()
