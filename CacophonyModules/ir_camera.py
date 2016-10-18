@@ -79,7 +79,7 @@ class MainThread(threading.Thread):
         
         self.videoData["duration"] = int(time.time()-self.startTime)
         self.recordingData["videoFile"] = self.videoData
-        self.recordingData["__type__"] = "videoRecording"
+        self.recordingData["__type__"] = "irVideoRecording"
         self.camera.stop_recording()
         util.save_data(self.recordingData, self.recordingFolder)
         self.recordingData = {}

@@ -75,8 +75,10 @@ class upload(threading.Thread):
             else:
                 print("Error: unknown file in folder: " + f)
 
-        if dataType == 'videoRecording':
-            url = serverUrl + '/api/v1/videoRecordings'
+        if dataType == 'irVideoRecording':
+            url = serverUrl + '/api/v1/irvideoRecordings'
+        elif dataType == 'thermalVideoRecording':
+            url = serverUrl + '/api/v1/thermalVideoRecordings'
         else:
             print("Datatype '{}' unknown.".format(dataType))
             return
