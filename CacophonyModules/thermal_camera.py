@@ -222,46 +222,4 @@ class ThermalRender(threading.Thread):
         print(command)
         os.system(command)
         util.save_data(data, outputF)
-        shutil.rmtree(imagesFolder)
-        
-    
-
-# Old code that was used to save images and convert them into a video when the
-# thermal camera was ran in a differnt process, now using threads instead.
-# Just here as a reminder.
-
-##def save_images(images):
-##    global imageIndex
-##    global imagesFolder
-##    if imagesFolder == None:
-##        imagesFolder = os.path.join(allImagesFolder, (str(int(time.time())))+util.rand_str())
-##        imageIndex = 1
-##        if not os.path.exists(imagesFolder):
-##            os.makedirs(imagesFolder)
-##    for i in images:
-##        imageName = str(imageIndex).zfill(6) + '.jpg'
-##        cv2.imwrite(os.path.join(imagesFolder, imageName), np.uint8(i))
-##        imageIndex += 1
-
-##def update_render():
-##    global renderProcess
-##    global rendering
-##    global rendered
-##    global renderingData
-##    if renderProcess == None and len(renderImages) > 0:
-##        rendering = list(renderImages.keys())[0]
-##        print(rendering)
-##        renderingData = renderImages[rendering]
-##        del renderImages[rendering]
-##        images = os.path.join(rendering, "%06d.jpg")
-##        output = os.path.join(rendering, "file.avi")
-##        print(images)
-##        print(output)
-##        args = ['/usr/local/bin/ffmpeg', '-r', str(fps), '-i', images, output]
-##        renderProcess = subprocess.Popen(args)
-##    if renderProcess != None and renderProcess.poll() == 0:
-##        renderProcess = None
-##        print("finished render")
-##        util.save_data(renderingData, os.path.join(rendering, 'file.avi'))
-##        util.upload_update()
-
+        shutil.rmtree(imagesFolder) 
