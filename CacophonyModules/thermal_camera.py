@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import os
 import util
+import shutil
 
 imageDelay = 0.2    # delay between images in seconds
 newImageEvent = threading.Event()
@@ -221,6 +222,7 @@ class ThermalRender(threading.Thread):
         print(command)
         os.system(command)
         util.save_data(data, outputF)
+        shutil.rmtree(imagesFolder)
         
     
 
