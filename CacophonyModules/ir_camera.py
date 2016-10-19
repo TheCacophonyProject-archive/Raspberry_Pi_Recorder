@@ -22,7 +22,7 @@ class MainThread(threading.Thread):
         resX = int(configParser.get('ir_camera', 'res_x'))
         resY = int(configParser.get('ir_camera', 'res_y'))
         self.camera.resolution = (resX, resY)
-        self.recordingData = {}
+        self.data = {}
         self.videoData = {}
         self.startTime = time.time()
 
@@ -68,21 +68,21 @@ class MainThread(threading.Thread):
         self.startTime = time.time()
         self.recordingFolder = "./ir_videos/"+str(int(time.time()*1000))+".h264"
         self.camera.start_recording(self.recordingFolder)
-        self.videoData = {
+        self.data = {
             "recordingDateTime": util.datetimestamp(),
-            "startTimestamp": util.timestamp()
+            "recordingTime": util.timestamp()
             }
 
     def stop_recording(self):
         print("Stopping recording.")
         self.recording = False
         
-        self.videoData["duration"] = int(time.time()-self.startTime)
-        self.recordingData["videoFile"] = self.videoData
-        self.recordingData["__type__"] = "irVideoRecording"
+        self.data["duration"] = int(time.time()-self.startTime)
+        self.data["videoFile"] = self.videoData
+        self.data["__type__"] = "irVideoRecording"
         self.camera.stop_recording()
-        util.save_data(self.recordingData, self.recordingFolder)
-        self.recordingData = {}
+        util.save_data(self.data, self.recordingFolder)
+        self.data = {}
 
     def pir_motion_start(self):
         self.pirMotion = True

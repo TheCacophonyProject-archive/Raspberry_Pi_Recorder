@@ -113,16 +113,15 @@ class CameraThread(threading.Thread):
         self.thermal_detection = td
         if td and not self.thermalDetection:
             self.thermalDetection = True
-            self.videoData = {
+            self.data = {
                 "recordingDateTime": util.datetimestamp(),
-                "startTimestamp": util.timestamp()
+                "recordingTime": util.timestamp()
                 }
             self.save_images(self.images)
         elif self.thermalDetection and not td:
             self.thermalDetection = False
-            self.videoData["duration"] = self.imageIndex/5
+            self.data["duration"] = self.imageIndex/5
             self.data["__type__"] = "thermalVideoRecording"
-            self.data["videoFile"] = self.videoData
             renderThread = ThermalRender()
             renderThread.run(self.imagesFolder, self.data)
             self.imagesFolder = None
