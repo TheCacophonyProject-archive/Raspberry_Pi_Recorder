@@ -7,4 +7,7 @@ res_y = 300
 
 [thermal_camera]
 buffer_size = 20
-sensitivity = 70
+sensitivity = 50
+capture_time_range = True
+start_capture_time = 08:00
+stop_capture_time = 05:00

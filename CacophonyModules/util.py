@@ -47,3 +47,14 @@ def datetimestamp(t = None):
 
 def timestamp():
     return(time.strftime(format('%H:%M:%S')))
+
+def inTimeRange(start, end):
+    now = time.strftime(format('%H:%M'))
+    start = int(start.split(":")[0])+int(start.split(":")[1])/100.0 #Change '10:23' into 10.23
+    end = int(end.split(":")[0])+int(end.split(":")[1])/100.0
+    now = int(now.split(":")[0])+int(now.split(":")[1])/100.0
+
+    if (start < end): # range doesn't pass through midnight.
+        return (start < now and now < end)
+    else: # Rnage passes throgh midnight.
+        return (start < now or now < end)

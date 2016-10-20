@@ -15,6 +15,9 @@ sensitivity = 50
 bufferSize = 20
 latestImage = None
 allImagesFolder = "./thermalData"
+captureTimeRange = False
+startCaptureTime = '00:00'
+stopCaptureTime = '00:00'
 
 class MainThread(threading.Thread):
     """Theramla camera main therad. Starts and controls child threads that
@@ -31,6 +34,12 @@ class MainThread(threading.Thread):
         self.renderThreads = []
         sensitivity = int(configParser.get('thermal_camera', 'sensitivity'))
         bufferSize = int(configParser.get('thermal_camera', 'buffer_size'))
+        global captureTimeRange
+        captureTimeRange = bool(configParser.get('thermal_camera', 'capture_time_range'))
+        global startCaptureTime
+        startCaptureTime = configParser.get('thermal_camera', 'start_capture_time')
+        global stopCaptureTime
+        stopCaptureTime = configParser.get('thermal_camera', 'stop_capture_time')
 
     def run(self):
         print("{name} thread running.".format(name = self.name))
@@ -179,6 +188,9 @@ class PicDetection(threading.Thread):
             events.new_event(events.THERMAL_DETECTION_END)
 
     def image_detection(self):
+        if captureTimeRange and not util.inTimeRange(startCaptureTime, stopCaptureTime):
+            print("Not in time range")
+            return False        
         maxVal = self.image.max()
         minVal = self.image.min()
         top25 = maxVal-(maxVal-minVal)*1/4
