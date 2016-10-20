@@ -20,7 +20,7 @@ threads = []
 # Add threads to list
 threads.append(pir.MainThread())
 threads.append(ir_camera.MainThread(configParser))
-threads.append(thermal_camera.MainThread())
+threads.append(thermal_camera.MainThread(configParser))
 threads.append(upload.MainThread(configParser))
 # Start all threads
 for thread in threads:

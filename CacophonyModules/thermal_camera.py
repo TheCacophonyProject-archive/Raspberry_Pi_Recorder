@@ -12,13 +12,14 @@ imageDelay = 0.2    # delay between images in seconds
 newImageEvent = threading.Event()
 thermalDetection = False
 sensitivity = 50
+bufferSize = 20
 latestImage = None
 allImagesFolder = "./thermalData"
 
 class MainThread(threading.Thread):
     """Theramla camera main therad. Starts and controls child threads that
        capture thermal images, process image and render images."""
-    def __init__(self):
+    def __init__(self, configParser):
         threading.Thread.__init__(self)
         self.events = []
         self._stop = False
@@ -27,6 +28,8 @@ class MainThread(threading.Thread):
         print("Created new '{name}' thread".format(name = self.name))
 
         self.renderThreads = []
+        sensitivity = int(configParser.get('thermal_camera', 'sensitivity'))
+        bufferSize = int(configParser.get('thermal_camera', 'buffer_size'))
 
     def run(self):
         print("{name} thread running.".format(name = self.name))
@@ -185,7 +188,7 @@ class PicDetection(threading.Thread):
         global thermalDetection
         detect = self.image_detection()
         if detect:
-            self.noDetectionCountdown = 20
+            self.noDetectionCountdown = bufferSize
         else:
             self.noDetectionCountdown -= 1
         if not thermalDetection and self.noDetectionCountdown > 0:

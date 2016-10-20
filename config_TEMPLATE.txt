@@ -1,0 +1,10 @@
+[server]
+url = http://192.168.2.3:8888
+
+[ir_camera]
+res_x = 400
+res_y = 300
+
+[thermal_camera]
+buffer_size = 20
+sensitivity = 70
