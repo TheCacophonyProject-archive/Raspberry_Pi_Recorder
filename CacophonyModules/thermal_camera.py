@@ -25,6 +25,7 @@ class MainThread(threading.Thread):
         self._stop = False
         self.eventWait = threading.Event()
         self.name = "Thermal Camera"
+        self.recording = False
         print("Created new '{name}' thread".format(name = self.name))
 
         self.renderThreads = []
@@ -71,25 +72,28 @@ class MainThread(threading.Thread):
         self._stop = True
 
     def thermal_detection_start(self):
-        self.cameraThread.set_thermal_detection(True)
+        self.cameraThread.start_recording()
+        self.data = {
+            "__type__": "thermalVideoRecording",
+            "recordingDateTime": util.datetimestamp(),
+            "recordingTime": util.timestamp()
+            }
 
     def thermal_detection_end(self):
-        self.cameraThread.set_thermal_detection(False)
+        images = self.cameraThread.stop_recording()
+        self.data["duration"] = len(images)/5
+        render = RenderAndUpload(images, self.data)
+        render.start()
 
 class CameraThread(threading.Thread):
     """Takes thermal pictures setting the new image event each time an image
-       is taken. Also saving the images if the thermal camera is recording."""
+       is taken."""
     def __init__(self):
         threading.Thread.__init__(self)
         self._stop = False
         self.lastImageCaptureTime = None
         self.images = []    # List of images
-        self.thermalDetection = False
-        self.pirDetection = False
-        self.renderThreads = []
-        self.imagesFolder = None
-        self.data = {}
-        self.videoData = {}
+        self.recording = False
         
     def run(self):
         with Lepton() as self.l:
@@ -103,6 +107,7 @@ class CameraThread(threading.Thread):
         self._stop = True
 
     def time_to_next_image(self):
+        """Returns the time in seconds intil the next image should be taken"""
         if self.lastImageCaptureTime == None:
             ttni = 0
         else:
@@ -112,53 +117,28 @@ class CameraThread(threading.Thread):
         self.lastImageCaptureTime = time.time()
         return ttni
 
-    def set_thermal_detection(self, td):
-        self.thermal_detection = td
-        if td and not self.thermalDetection:
-            self.thermalDetection = True
-            self.data = {
-                "recordingDateTime": util.datetimestamp(),
-                "recordingTime": util.timestamp()
-                }
-            self.save_images(self.images)
-        elif self.thermalDetection and not td:
-            self.thermalDetection = False
-            self.data["duration"] = self.imageIndex/5
-            self.data["__type__"] = "thermalVideoRecording"
-            renderThread = ThermalRender()
-            renderThread.run(self.imagesFolder, self.data)
-            self.imagesFolder = None
-            self.data = {}
-
-    def set_pir_detection(self, pd):
-        self.pirDetection = pd
-
     def take_image(self):
         global latestImage
         a,_ = self.l.capture()
         cv2.normalize(a, a, 0, 65535, cv2.NORM_MINMAX)
         np.right_shift(a, 8, a)
-        while len(self.images) > 5:
-            del self.images[0]
+        
+        if not self.recording:
+            while len(self.images) > 5:
+                del self.images[0]
+
         self.images.append(a)
         latestImage = a
         newImageEvent.set()
-        self.images.append(a)
-        while len(self.images) > 10:
-            del self.images[0]
-        if self.thermalDetection:
-            self.save_images([a])
 
-    def save_images(self, images):
-        if self.imagesFolder == None:
-            self.imagesFolder = os.path.join(allImagesFolder, (str(int(time.time())))+util.rand_str())
-            self.imageIndex = 1
-            if not os.path.exists(self.imagesFolder):
-                os.makedirs(self.imagesFolder)
-        for i in images:
-            imageName = str(self.imageIndex).zfill(6) + '.jpg'
-            cv2.imwrite(os.path.join(self.imagesFolder, imageName), np.uint8(i))
-            self.imageIndex += 1         
+    def start_recording(self):
+        self.recording = True
+
+    def stop_recording(self):
+        self.recording = False
+        i = self.images
+        self.images = []
+        return i
 
 class PicDetection(threading.Thread):
     """Loops through waiting for a new image event and processing the image to
@@ -212,16 +192,31 @@ class PicDetection(threading.Thread):
         m = numInTop25 < sensitivity
         return m
 
-class ThermalRender(threading.Thread):
-    def __inti__(self):
+class RenderAndUpload(threading.Thread):
+    """Takes array of images, saves to images then renders images into an avi, then sends for uploading."""
+    def __init__(self, images, data):
         threading.Thread.__init__(self)
+        self.images = images
+        self.data = data
 
-    def run(self, imagesFolder, data):
+    def run(self):
+
+        # Craete folder to save images in
+        imagesFolder = os.path.join(allImagesFolder, (str(int(time.time())))+util.rand_str())
+        os.makedirs(imagesFolder)
+        # Save images
+        imageIndex = 0
+        for i in self.images:
+            imageName = str(imageIndex).zfill(6) + '.jpg'
+            imageIndex += 1
+            cv2.imwrite(os.path.join(imagesFolder, imageName), np.uint8(i))
+
+        # Render into avi
         inputF = os.path.join(imagesFolder, "%06d.jpg")
         outputF = os.path.join(imagesFolder, "file.avi")
         command = "/usr/local/bin/ffmpeg -r 5 -i {i} {o}".format(
             i = inputF, o = outputF)
         print(command)
         os.system(command)
-        util.save_data(data, outputF)
-        shutil.rmtree(imagesFolder) 
+        util.save_data(self.data, outputF)
+        shutil.rmtree(imagesFolder)
