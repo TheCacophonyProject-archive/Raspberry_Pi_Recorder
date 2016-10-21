@@ -4,6 +4,7 @@ import random
 import string
 import json
 import time
+import requests
 
 def make_dirs(dirs):
     """Makes the dirs in the list given"""
@@ -58,3 +59,17 @@ def inTimeRange(start, end):
         return (start < now and now < end)
     else: # Rnage passes throgh midnight.
         return (start < now or now < end)
+
+def ping(config):
+    result = False
+    url = config.get('server', 'url')
+    print("Pinging server")
+    try:
+        r = requests.get(url+'/ping')
+        if r.text == 'pong...':
+            print('Pong...')
+            result = True
+    except:
+        print("Error with connecting to server.")
+        result = False
+    return result
