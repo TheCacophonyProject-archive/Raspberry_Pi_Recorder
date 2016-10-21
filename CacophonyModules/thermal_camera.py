@@ -35,7 +35,7 @@ class MainThread(threading.Thread):
         sensitivity = int(configParser.get('thermal_camera', 'sensitivity'))
         bufferSize = int(configParser.get('thermal_camera', 'buffer_size'))
         global captureTimeRange
-        captureTimeRange = bool(configParser.get('thermal_camera', 'capture_time_range'))
+        captureTimeRange |= configParser.get('thermal_camera', 'capture_time_range') == "True"
         global startCaptureTime
         startCaptureTime = configParser.get('thermal_camera', 'start_capture_time')
         global stopCaptureTime
