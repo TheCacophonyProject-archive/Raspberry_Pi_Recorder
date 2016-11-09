@@ -4,6 +4,7 @@ import shutil
 import os
 import requests
 import json
+import device
 
 serverUrl = None
 
@@ -86,7 +87,9 @@ class upload(threading.Thread):
         # Post and print status code.
         print('Posting data...')
         try:
-            r = requests.post(url, files = files, data = {'data': json.dumps(metadata)})
+            data = {'data': json.dumps(metadata)}
+            headers = {'authorization': device.get_private_setting('jwt')}
+            r = requests.post(url, files = files, data = data, headers = headers)
             print('Status code: {}'.format(r.status_code))
 
             # Delete files if upload was a success.

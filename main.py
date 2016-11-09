@@ -1,5 +1,5 @@
 import sys
-from CacophonyModules import pir, ir_camera, events, thermal_camera, upload, util
+from CacophonyModules import pir, ir_camera, events, thermal_camera, upload, util, device
 import RPi.GPIO as GPIO
 import ConfigParser
 import os
@@ -9,13 +9,17 @@ import time
 configParser = ConfigParser.RawConfigParser()
 configPath = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), "config.txt")
-privateConfig = os.path.join(
-    os.path.dirname(os.path.realpath(__file__)), 'config.txt')
+privateConfigPath = os.path.join(
+    os.path.dirname(os.path.realpath(__file__)), 'privateConfig.txt')
 
 if not os.path.isfile(configPath):
     print("Can't find config file: " + configPath)
     sys.exit()
-    
+
+if not device.init(configPath, privateConfigPath):
+    print("Device init failed.")
+    sys.exit()
+
 configParser.read(configPath)
 
 stop = False
