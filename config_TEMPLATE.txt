@@ -9,5 +9,8 @@ res_y = 300
 buffer_size = 20
 sensitivity = 50
 capture_time_range = True
-start_capture_time = 08:00
+start_capture_time = 20:00
 stop_capture_time = 05:00
+
+[device]
+group = 
